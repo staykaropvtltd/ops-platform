@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, Lead, EmailLog } from '@/lib/db';
 import { getTransporter } from '@/lib/email';

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, Lead, User } from '@/lib/db';
 import { logActivity } from '@/lib/activity';
