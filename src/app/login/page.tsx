@@ -17,75 +17,54 @@ const ROLES = [
 
 type RoleId = typeof ROLES[number]['id'];
 
+// Mock credentials for prototype testing
+const MOCK_USERS: Record<string, { password: string; name: string; route: string }> = {
+  'admin@ops.com':    { password: 'admin123',    name: 'System Admin',    route: '/dashboard' },
+  'manager@ops.com':  { password: 'manager123',  name: 'Mateo Rivera',    route: '/manager' },
+  'employee@ops.com': { password: 'employee123', name: 'Priya Patel',     route: '/employee' },
+  'mr@ops.com':       { password: 'mr123',       name: 'Marketing Rep',   route: '/mr' },
+};
+
 export default function Login() {
   const router = useRouter();
-  const [isRegister, setIsRegister] = useState(false);
-  const [role, setRole] = useState<RoleId>('Marketing Representative');
+  const [role, setRole] = useState<RoleId>('Admin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pre-fill credentials when role is selected
+  const handleRoleSelect = (roleId: RoleId) => {
+    setRole(roleId);
+    setError(null);
+    const presets: Record<RoleId, { email: string; password: string }> = {
+      'Admin':                    { email: 'admin@ops.com',    password: 'admin123' },
+      'Manager':                  { email: 'manager@ops.com',  password: 'manager123' },
+      'Employee':                 { email: 'employee@ops.com', password: 'employee123' },
+      'Marketing Representative': { email: 'mr@ops.com',       password: 'mr123' },
+    };
+    setEmail(presets[roleId].email);
+    setPassword(presets[roleId].password);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const endpoint = isRegister ? '/api/auth/signup' : '/api/auth/login';
-    
-    // Map UI role to DB role to ensure schema validation succeeds
-    const dbRoleMap: Record<string, string> = {
-      Admin: 'Admin',
-      Manager: 'Manager',
-      Employee: 'Staff',
-      'Marketing Representative': 'User'
-    };
+    // Simulate network delay for realism
+    await new Promise(r => setTimeout(r, 700));
 
-    const body = isRegister 
-      ? { email, password, name, role: dbRoleMap[role] || role } 
-      : { email, password };
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        setError(data.error || 'Authentication failed');
-        setLoading(false);
-        return;
-      }
-
-      if (isRegister) {
-        setIsRegister(false);
-        setError('Account created! Please sign in.');
-        setLoading(false);
-      } else {
-        // Save user info (simplified session)
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Map DB role back to frontend routes
-        const routeMap: Record<string, string> = {
-          Admin: '/dashboard',
-          Manager: '/manager',
-          Staff: '/employee',
-          Employee: '/employee',
-          User: '/marketing',
-          'Marketing Representative': '/marketing'
-        };
-        router.push(routeMap[data.user.role] || '/dashboard');
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Connection error. Please try again.';
-      setError(message);
+    const user = MOCK_USERS[email.toLowerCase()];
+    if (!user || user.password !== password) {
+      setError('Invalid credentials. Use the preset credentials shown below.');
       setLoading(false);
+      return;
     }
+
+    localStorage.setItem('user', JSON.stringify({ email, name: user.name, role }));
+    router.push(user.route);
   };
 
   return (
@@ -100,7 +79,7 @@ export default function Login() {
       padding: '40px 16px',
     }}>
 
-      {/* ── LOGO ── */}
+      {/* LOGO */}
       <Link href="/landing" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
         <div style={{
           width: 52, height: 52,
@@ -121,7 +100,22 @@ export default function Login() {
         </div>
       </Link>
 
-      {/* ── CARD ── */}
+      {/* PROTOTYPE BADGE */}
+      <div style={{
+        background: 'rgba(245,158,11,0.12)',
+        border: '1px solid rgba(245,158,11,0.4)',
+        borderRadius: 10,
+        padding: '8px 16px',
+        fontSize: 12,
+        fontWeight: 700,
+        color: '#92400e',
+        marginBottom: 24,
+        letterSpacing: '0.05em',
+      }}>
+        🧪 PROTOTYPE MODE — Click a role to auto-fill credentials
+      </div>
+
+      {/* CARD */}
       <div style={{
         background: 'white',
         borderRadius: 24,
@@ -132,19 +126,19 @@ export default function Login() {
       }}>
 
         <h1 style={{ fontSize: 30, fontWeight: 800, color: '#1e1b4b', textAlign: 'center', marginBottom: 8, letterSpacing: '-0.02em' }}>
-          {isRegister ? 'Create Account' : 'Welcome back'}
+          Welcome back
         </h1>
         <p style={{ fontSize: 14.5, color: '#6b7280', textAlign: 'center', marginBottom: 32, lineHeight: 1.5 }}>
-          {isRegister ? 'Join the enterprise operations platform.' : 'Please enter your details to sign in.'}
+          Select your role and sign in to the prototype.
         </p>
 
         {error && (
-          <div style={{ 
-            padding: '12px 16px', 
-            background: error.includes('created') ? '#ecfdf5' : '#fef2f2', 
-            border: `1px solid ${error.includes('created') ? '#10b981' : '#ef4444'}`,
+          <div style={{
+            padding: '12px 16px',
+            background: '#fef2f2',
+            border: '1px solid #ef4444',
             borderRadius: 12,
-            color: error.includes('created') ? '#065f46' : '#991b1b',
+            color: '#991b1b',
             fontSize: 13,
             fontWeight: 600,
             marginBottom: 24,
@@ -154,25 +148,25 @@ export default function Login() {
           </div>
         )}
 
-        {/* ── ROLE SELECTOR ── */}
+        {/* ROLE SELECTOR */}
         <div style={{ marginBottom: 28 }}>
           <label style={{
             display: 'block', fontSize: 11, fontWeight: 700,
             color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10,
           }}>
-            Select {isRegister ? 'Target Role' : 'Workspace Role'}
+            Select Workspace Role
           </label>
           <div style={{
-            display: 'grid', gridTemplateColumns: `repeat(${isRegister ? 3 : 4}, 1fr)`,
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
             border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden',
           }}>
-            {ROLES.filter(r => !isRegister || r.id !== 'Admin').map(({ id, label, Icon }, i) => {
+            {ROLES.map(({ id, label, Icon }, i) => {
               const active = role === id;
               return (
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setRole(id)}
+                  onClick={() => handleRoleSelect(id)}
                   style={{
                     padding: '14px 8px',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
@@ -200,31 +194,8 @@ export default function Login() {
           </div>
         </div>
 
-        {/* ── FORM ── */}
+        {/* FORM */}
         <form onSubmit={handleSubmit}>
-
-          {isRegister && (
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-                Full Name
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Users size={16} color="#9ca3af" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="John Doe"
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '12px 14px 12px 42px',
-                    border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: 14, color: '#1e1b4b', outline: 'none'
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
           {/* Email */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -279,19 +250,34 @@ export default function Login() {
               boxShadow: '0 6px 20px rgba(79,70,229,0.4)', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10
             }}
           >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : (isRegister ? 'Create Account' : 'Sign In')}
+            {loading ? <Loader2 size={20} className="animate-spin" /> : 'Sign In'}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: 13.5, color: '#6b7280', marginTop: 28 }}>
-          {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button 
-            onClick={() => { setIsRegister(!isRegister); setError(null); }}
-            style={{ background: 'none', border: 'none', color: '#4f46e5', fontWeight: 700, cursor: 'pointer', padding: 0, fontSize: 'inherit' }}
-          >
-            {isRegister ? 'Sign In' : 'Request access / Sign Up'}
-          </button>
-        </p>
+        {/* MOCK CREDENTIALS TABLE */}
+        <div style={{
+          marginTop: 28,
+          padding: '16px',
+          background: '#f8faff',
+          border: '1px solid #e0e7ff',
+          borderRadius: 12,
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+            Prototype Credentials
+          </p>
+          {[
+            { role: 'Admin',    email: 'admin@ops.com',    pass: 'admin123' },
+            { role: 'Manager',  email: 'manager@ops.com',  pass: 'manager123' },
+            { role: 'Employee', email: 'employee@ops.com', pass: 'employee123' },
+            { role: 'Mktg Rep', email: 'mr@ops.com',       pass: 'mr123' },
+          ].map(c => (
+            <div key={c.role} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#374151', marginBottom: 4, fontFamily: 'monospace' }}>
+              <span style={{ fontWeight: 700, color: '#4f46e5', minWidth: 80 }}>{c.role}</span>
+              <span style={{ color: '#6b7280' }}>{c.email}</span>
+              <span style={{ color: '#9ca3af' }}>{c.pass}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
